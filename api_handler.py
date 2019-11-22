@@ -12,7 +12,7 @@ def get_currentconditions(location):
     print(response.url) #
     print(response.text) #
     data = json.loads(response.text)
-    s = "<b>Погода в Тюмени</b>\n\n"
+    s = "*"+"*\n\n"
     s += str(data[0]["Temperature"]["Metric"]["Value"]) + "°C, ощущается как " + str(data[0]["RealFeelTemperature"]["Metric"]["Value"]) + "\n"
     s += str(data[0]["WeatherText"])
     print(s)
@@ -31,17 +31,21 @@ def get_location(query):
 
     data = json.loads(response.text)
     if len(data)==0:
-        s="Ничего не найдено\n"
+        #s="Ничего не найдено\n"
+        return None
     else:
         cities_list=dict() #
+        mas=[]
         s="Результаты:\n"
         for city in data:
+            mas.append([data.index(city)+1, city["LocalizedName"], city["Key"]])
             city_str=city["LocalizedName"]+", "+city["AdministrativeArea"]["LocalizedName"]+", "+city["Country"]["LocalizedName"]
             cities_list[data.index(city)+1]=city["Key"]
-            s+="<b>"+str(data.index(city)+1)+"</b>. "+city_str+"\n"
-        s+="\nНапишите номер города, чтобы узнать погоду."
-
+            s+="*"+str(data.index(city)+1)+"*. "+city_str+"\n"
+        #s+="\nНапишите номер города, чтобы узнать погоду."
+        #return s
     print(cities_list)
+    print(mas)
     print(s)
     # print(len(data))
     # print(data)
@@ -65,4 +69,4 @@ def get_location(query):
 
 
 #get_currentconditions(291102)
-#get_location("тюмень")
+get_location("тюмень")
