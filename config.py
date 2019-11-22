@@ -1,8 +1,8 @@
 from enum import Enum
 import keys
 
-db_file = "database.vdb"
-
+database = "database.db"
+temp_search_results=[]
 
 class States(Enum):
     S_START = "0"  # Начало нового диалога
@@ -12,7 +12,8 @@ class States(Enum):
 
 class Result_str(object):
 
-    def __init__(self, number, city_name, city_key):
+    def __init__(self, number, city_name, city_key, full_str):
         self.number = number
         self.city_name = city_name
         self.city_key = city_key
+        self.full_str = full_str
