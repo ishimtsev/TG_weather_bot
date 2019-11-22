@@ -41,11 +41,11 @@ def user_entering_name(message):
         bot.send_message(message.chat.id, s, parse_mode="Markdown")
         dbworker.set_state(message.chat.id, config.States.S_CITY_FOUND.value)
 
-@bot.message_handler(func=lambda message: dbworker.get_state(message.chat.id) == config.States.S_CITY_FOUND.value)
-def user_entering_name(message):
-    for result in config.temp_search_results:
-        if result
-    results=
+# @bot.message_handler(func=lambda message: dbworker.get_state(message.chat.id) == config.States.S_CITY_FOUND.value)
+# def user_entering_name(message):
+#     for result in config.temp_search_results:
+#         if result
+#     results=
 
 @bot.message_handler(content_types=['text'])
 def send_text(message):
