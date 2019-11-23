@@ -1,14 +1,14 @@
 from enum import Enum
-import keys
 
 database = "database.db"
-temp_search_results=[]
+
 
 class States(Enum):
     S_START = "0"  # Начало нового диалога
     S_CITY_SEARCH = "1"
     S_CITY_FOUND = "2"
     S_CITY_OK = "3"
+
 
 class Result_str(object):
 

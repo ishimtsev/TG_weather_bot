@@ -1,57 +1,77 @@
 import telebot
 import api_handler
-import json
+
 import config
 import keys
-import dbworker
+import dbworker as db
 
 
-# try:
-#     bot = telebot.TeleBot(config.bot_api_key)
-# except Exception:
-#     print("Нужно включить VPN")
 bot = telebot.TeleBot(keys.bot_api_key)
 
+
+def represents_int(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+
 @bot.message_handler(commands=['start'])
-def start_message(message):
-    print(message)
-    bot.send_message(message.chat.id, 'Привет!\nВ каком городе хочешь узнать погоду?')
-    dbworker.set_state(message.chat.id, config.States.S_CITY_SEARCH.value)
-    #print(message.chat.id)
+def func(message):
+    if db.is_user_exist(message.chat.id):
+        bot.send_message(message.chat.id, "В каком городе хотите узнать погоду?")
+        db.set_user_state(message.chat.id, config.States.S_CITY_SEARCH.value)
+    else:
+        bot.send_message(message.chat.id, "Привет!\nВ каком городе хотите узнать погоду?")
+        db.add_user(message.chat.id)
+
 
 @bot.message_handler(commands=['weather'])
-def start_message(message):
-    print(dbworker.get_state(message.chat.id)) #
-    bot.send_message(message.chat.id, api_handler.get_currentconditions(291102), parse_mode="Markdown")
-
-@bot.message_handler(func=lambda message: dbworker.get_state(message.chat.id) == config.States.S_CITY_SEARCH.value)
-def user_entering_name(message):
-    print(message.text)
-
-    results = api_handler.get_location(message.text)
-    if results is None:
-        bot.send_message(message.chat.id, "Ничего не найдено\nНапишите название города ещё раз:")
+def func(message):
+    if db.get_user_state(message.chat.id) != config.States.S_CITY_OK.value: # Проверка, есть ли у пользователя сохранённый город
+        bot.send_message(message.chat.id, "Сначала нужно выбрать город. Сделайте это с помощью комманды */start*", parse_mode="Markdown")
     else:
-        config.temp_search_results.append(results)       # Сохраняем результаты
+        city_info = db.get_city(message.chat.id)
+        s = "*" + str(city_info[0]) + "*\n\n" + str(api_handler.get_currentconditions(city_info[1]))
+        bot.send_message(message.chat.id, s, parse_mode="Markdown")
+
+
+@bot.message_handler(func=lambda message: db.get_user_state(message.chat.id) == config.States.S_CITY_SEARCH.value)
+def func(message):
+    db.delete_temp_results(message.chat.id) # Удаление результатов предыдущего поиска
+    results = api_handler.get_location(message.text) # Получение новых результатов
+    if results is None:
+        bot.send_message(message.chat.id, "Ничего не найдено.\nНапишите название города ещё раз:")
+    else:
+        db.add_temp_results(message.chat.id, results) # Сохраняем результаты в БД
         s="Результаты:\n\n"
         for row in results:
-            s+="*"+row.number+"*. "+row.full_str+"\n"
-        s+="\nНапишите номер города, чтобы узнать погоду."
-
+            s += "*" + str(row.number) + "*. " + row.full_str + "\n"
+        s += "\nНапишите номер города, чтобы узнать погоду."
         bot.send_message(message.chat.id, s, parse_mode="Markdown")
-        dbworker.set_state(message.chat.id, config.States.S_CITY_FOUND.value)
+        db.set_user_state(message.chat.id, config.States.S_CITY_FOUND.value)
 
-# @bot.message_handler(func=lambda message: dbworker.get_state(message.chat.id) == config.States.S_CITY_FOUND.value)
-# def user_entering_name(message):
-#     for result in config.temp_search_results:
-#         if result
-#     results=
 
-@bot.message_handler(content_types=['text'])
-def send_text(message):
-    if message.text.lower() == 'привет':
-        bot.send_message(message.chat.id, 'Привет')
-    elif message.text.lower() == 'пока':
-        bot.send_message(message.chat.id, '*Пока*', parse_mode="Markdown")
+@bot.message_handler(func=lambda message: db.get_user_state(message.chat.id) == config.States.S_CITY_FOUND.value)
+def func(message):
+    results = db.get_temp_results(message.chat.id)
+    if represents_int(message.text):
+        if 1 <= int(message.text) <= len(results):
+            for result in results:  # ['city_number', 'city_name', 'city_key']
+                if str(result["city_number"]) == str(message.text):
+                    db.set_city(message.chat.id, str(result["city_name"]), str(result["city_key"]))
+                    s = "Отлично! Теперь с помощью команды */weather* вы можете узнать погоду в городе *" + str(result["city_name"]) + "*."
+                    bot.send_message(message.chat.id, s, parse_mode="Markdown")
+                    db.set_user_state(message.chat.id, config.States.S_CITY_OK.value)
+                    db.delete_temp_results(message.chat.id)  # Удаление временных результатов поиска
+                    break
+        else:
+            bot.send_message(message.chat.id, "Неверный номер города.\nНапишите номер города, чтобы узнать погоду или /start для поиска другого города.",
+                             parse_mode="Markdown")
+    else:
+        bot.send_message(message.chat.id, "Неверный номер города.\nНапишите номер города, чтобы узнать погоду или /start для поиска другого города.",
+                         parse_mode="Markdown")
+
 
 bot.polling()
